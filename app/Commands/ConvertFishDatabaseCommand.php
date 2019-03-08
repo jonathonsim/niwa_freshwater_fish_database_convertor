@@ -19,8 +19,8 @@ use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 class ConvertFishDatabaseCommand extends Command
 {
 
-    private $output_file= [];
-    private $lines_written=[];
+    private $output_file = [];
+    private $lines_written = [];
     private $fh_output = [];
 
     //NIWA publishes this as an XLS file here https://www.niwa.co.nz/freshwater-and-estuaries/nzffd/user-guide/tips
@@ -138,17 +138,17 @@ class ConvertFishDatabaseCommand extends Command
         //Create a new output file every 2k lines
         if (
             !array_key_exists($prefix, $this->output_file) ||
-            ! $this->output_file[$prefix] ||
-            ! array_key_exists($prefix, $this->lines_written) ||
+            !$this->output_file[$prefix] ||
+            !array_key_exists($prefix, $this->lines_written) ||
             !($this->lines_written[$prefix] % 2000)
         ) {
             if (!array_key_exists($prefix, $this->lines_written)) {
                 $this->lines_written[$prefix] = 0;
             }
             $i = (int)($this->lines_written[$prefix] / 2000) + 1;
-            $this->output_file[$prefix] = $dir . "/output$prefix$i.csv";
+            $this->output_file[$prefix] = $dir . "/$prefix" . ($i != 1 ? $i : '') . ".csv";
             $this->fh_output[$prefix] = fopen($this->output_file[$prefix], "w");
-            $output->writeln("<comment>Outputting lines ".$this->lines_written[$prefix]."-" . ($this->lines_written[$prefix] + 2000) . " to ".$this->output_file[$prefix]."</comment>");
+//            $output->writeln("<comment>Outputting lines ".$this->lines_written[$prefix]."-" . ($this->lines_written[$prefix] + 2000) . " to ".$this->output_file[$prefix]."</comment>");
             fputcsv($this->fh_output[$prefix], $header);
             $this->lines_written[$prefix]++;
 
@@ -158,6 +158,19 @@ class ConvertFishDatabaseCommand extends Command
         $this->lines_written[$prefix]++;
     }
 
+    function getLines($file)
+    {
+        $f = fopen($file, 'rb');
+        $lines = 0;
+
+        while (!feof($f)) {
+            $lines += substr_count(fread($f, 8192), "\n");
+        }
+
+        fclose($f);
+
+        return $lines;
+    }
 
     /**
      * Execute the command.
@@ -168,12 +181,15 @@ class ConvertFishDatabaseCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $section1 = $output->section();
 
         $csv_file = $input->getArgument('file');
         $nzcoords = new \App\Services\NzCoordinates();
 
         $output_dir = realpath($input->getArgument('output_dir'));
 
+
+        //Support only calculating a local area, defined as quarter of  degree lat/long around a given coordinate
         $lat = 0;
         $long = 0;
         if ($input->getOption('location')) {
@@ -182,7 +198,7 @@ class ConvertFishDatabaseCommand extends Command
 
             //What is 1 degree difference in lat/long converted into NZMG easting/northing
             $coords1 = $nzcoords->nzGd1949ToNzmg(-34, 172);
-            $coords2 = $nzcoords->nzGd1949ToNzmg(-33, 171);
+            $coords2 = $nzcoords->nzGd1949ToNzmg(-33.75, 171.75);
 
             $northing_difference = abs($coords1[0] - $coords2[0]);
             $easting_difference = abs($coords1[1] - $coords2[1]);
@@ -193,24 +209,26 @@ class ConvertFishDatabaseCommand extends Command
             $file_per_species = true;
         }
 
-
-        $output->writeln("<comment>Converting $csv_file into $output_dir/* " .
+        $output->writeln("\n<comment>\nConverting $csv_file into $output_dir/* " .
             ($input->getOption('file-per-species') ? ' - file per species' : '') .
             ($input->getOption('location') ? ' - within one degree of ' . $input->getOption('location') : '') .
             "</comment>");
 
         $fh = fopen($csv_file, "r");
+        $lines = $this->getLines($csv_file);
 
         $header = fgetcsv($fh);
         $header[] = 'location';
         $header[] = 'species';
 
         $header_index = array_flip($header);
+        $prefix = 'output';
 
-
-        $prefix = '';
-
+        $i = 0;
+        $start = time();
         while ($row = fgetcsv($fh)) {
+            $i++;
+
             $north = $row[$header_index['north']];
             $east = $row[$header_index['east']];
 
@@ -226,12 +244,20 @@ class ConvertFishDatabaseCommand extends Command
             $coords = $nzcoords->nzmgToNzGd1949($north, $east);
 
             if ($file_per_species) {
-                $prefix = '_' . $row[$header_index['spcode']];
+                $prefix = $row[$header_index['spcode']];
             }
 
             $row[$header_index['location']] = "$coords[0],$coords[1]";
             $row[$header_index['species']] = implode(', ', self::SPECIES[$row[$header_index['spcode']]]);
             $this->writeRow($input, $output, $output_dir, $prefix, $header, $row);
+            $now = time();
+
+            $elapsed = $now - $start;
+            $total_time = $elapsed / ($i/$lines);
+            $remaining = $total_time - $elapsed;
+
+            $section1->overwrite($i .'/'.$lines . ' approx '.sprintf("%0.0f elapsed %.0f",$elapsed,$remaining) .' seconds remaining');
+
         }
 
         $output->writeln('<comment>convert-csv-to-google-maps run complete: OK</comment>');
