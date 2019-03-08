@@ -123,7 +123,9 @@ class ConvertFishDatabaseCommand extends Command
             ->addOption('file-per-species', null, InputOption::VALUE_NONE,
                 'Create a separate output file for each species')
             ->addOption('location', null, InputOption::VALUE_REQUIRED,
-                'A decimal latitude/longitude pair - we will only generate data within 1degree (approx 110km) radius of that location');
+                'A decimal latitude/longitude pair - we will only generate data within 1degree (approx 110km) radius of that location')
+            ->addOption('radius', null, InputOption::VALUE_REQUIRED,
+                'Radius (in degrees of latitude/longitude) to calculate around location.  Default is 0.25');
     }
 
 
@@ -196,9 +198,10 @@ class ConvertFishDatabaseCommand extends Command
             [$lat, $long] = explode(',', $input->getOption('location'));
             [$base_northing, $base_easting] = $nzcoords->nzGd1949ToNzmg($lat, $long);
 
+            $radius = $input->getOption('radius') ?? 0.25;
             //What is 1 degree difference in lat/long converted into NZMG easting/northing
             $coords1 = $nzcoords->nzGd1949ToNzmg(-34, 172);
-            $coords2 = $nzcoords->nzGd1949ToNzmg(-33.75, 171.75);
+            $coords2 = $nzcoords->nzGd1949ToNzmg(-34 - $radius, 172 - $radius);
 
             $northing_difference = abs($coords1[0] - $coords2[0]);
             $easting_difference = abs($coords1[1] - $coords2[1]);
