@@ -22,6 +22,7 @@ composer install
     tmp/nzffdms.csv #Path to the database
     tmp/ #Output directory
     --location=-36.6119003,174.8336885 #Optional - only process within 0.25 degree latitude/longitude of this location
+    - radius=0.25 # Degrees radius around the location to process.  Speeds things up a lot.
     --file-per-species #Create a seperate output file per species
 ````
 - Go to google my maps https://www.google.com/mymaps and upload the files produced

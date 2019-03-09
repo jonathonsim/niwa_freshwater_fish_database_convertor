@@ -256,10 +256,10 @@ class ConvertFishDatabaseCommand extends Command
             $now = time();
 
             $elapsed = $now - $start;
-            $total_time = $elapsed / ($i/$lines);
+            $total_time = $elapsed /$i   * $lines;
             $remaining = $total_time - $elapsed;
 
-            $section1->overwrite($i .'/'.$lines . ' approx '.sprintf("%0.0f elapsed %.0f",$elapsed,$remaining) .' seconds remaining');
+            $section1->overwrite($i .'/'.$lines . '  '.sprintf("%0.0f elapsed %.0f",$elapsed,$remaining) .' seconds remaining');
 
         }
 
