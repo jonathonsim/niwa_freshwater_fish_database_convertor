@@ -10,9 +10,9 @@ maps has a couple of advantages - mainly that it shows roads and satellite maps 
 
 
 # How to use
-- Download the NIWA database from https://nzffdms.niwa.co.nz/search. Choose 'CSV' as the output format and leave the 
+1. Download the NIWA database from https://nzffdms.niwa.co.nz/search. Choose 'CSV' as the output format and leave the 
 other search fields blank 
-
+2. Install this code
 ````
 git clone https://github.com/jonathonsim/niwa_freshwater_fish_database_convertor.git
 cd niwa_freshwater_fish_database_convertor
@@ -25,9 +25,9 @@ composer install
     - radius=0.25 # Degrees radius around the location to process.  Speeds things up a lot.
     --file-per-species #Create a seperate output file per species
 ````
-- Go to google my maps https://www.google.com/mymaps and upload the files produced
-- when asked what field holds the location choose 'location' and choose 'Latitude, Longitude'.  
-- For a column to title the markers choose 'catchname'
+3. Go to google my maps https://www.google.com/mymaps and upload the files produced
+4. when asked what field holds the location choose 'location' and choose 'Latitude, Longitude'.  
+5. For a column to title the markers choose 'catchname'
 
 
 # Notes
